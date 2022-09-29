@@ -1,17 +1,21 @@
-// Add Express
 const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 
-// Initialize Express
 const app = express();
-
-// Create GET request
-app.get("/", (req, res) => {
-  res.send("Express on Vercel");
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: { origin: "http://localhost:3000" },
 });
 
-// Initialize server
-app.listen(5000, () => {
-  console.log("Running on port 5000.");
+io.on("connection", (socket) => {
+  console.log(`Connected: ${socket.id}`);
+
+  socket.on("client-message", (message) => {
+    console.log(`Client sent message: ${message}`);
+  });
 });
+
+httpServer.listen(5000);
 
 module.exports = app;
