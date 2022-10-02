@@ -16,7 +16,7 @@ io.on("connection", (socket) => {
   //on successful connection: 1- Log, 2-Leave default room, 3-Send a client update to initialize local state
   console.log(`${greenText}Connected: ${socket.id}`);
   leaveAllRooms(socket);
-  socket.emit("client-update", { clientId: socket.id, activeGame: null });
+  socket.emit("client-update", { clientId: socket.id, activeGame: false });
 
   //handle room join request
   socket.on("join-room", (roomName) => {
@@ -29,9 +29,15 @@ io.on("connection", (socket) => {
   });
 
   //handle start-game request
-  socket.on("start-game", (roomName) => {
-    startGame(roomName);
+  socket.on("start-game", ({ roomName, opponent }) => {
+    console.log(roomName, opponent);
+    startGame(opponent);
     console.log(`Game started at room ${roomName}.`);
+  });
+
+  //handle attack
+  socket.on("attack-cell", ({ roomName, cell }) => {
+    attackCell(socket, roomName, cell);
   });
 
   //handle & cleanup on disconnect
@@ -45,7 +51,7 @@ httpServer.listen(8080);
 
 module.exports = app;
 
-//connection functions
+//--------CONNECTION FUNCTIONS-----------
 
 async function joinRoom(socket, roomName) {
   const sockets = await io.in(roomName).fetchSockets(); //see if room is in use
@@ -53,7 +59,11 @@ async function joinRoom(socket, roomName) {
     //if room is NOT empty
     leaveAllRooms(socket); //leave default or previous room(s)
     socket.join(roomName); //join room
-    io.to(roomName).emit("client-update", { roomName: roomName, players: [sockets[0].id, socket.id] }); //broadcast new player, roomname to host and player
+    const [hostId] = sockets.map((currentSocket) => currentSocket.id).filter((id) => id !== socket.id);
+    console.log(hostId);
+    io.to(socket.id).emit("client-update", { roomName: roomName, opponent: hostId });
+    io.to(hostId).emit("client-update", { roomName: roomName, opponent: socket.id });
+    // io.to(roomName).emit("client-update", { roomName: roomName, players: [sockets[0].id, socket.id] }); //broadcast new player, roomname to host and player
     console.log(`Client ${socket.id} joined room ${roomName}.`); //log event
   } else {
     // If user tries to "join" and empty room log it to console.
@@ -74,14 +84,19 @@ async function createRoom(socket, roomName) {
   }
 }
 function leaveAllRooms(socket) {
-  //force socket to leave default and previously joined rooms.
+  //force socket to leave and previously joined rooms.
   socket.rooms.forEach((room) => {
-    socket.leave(room);
+    if (room !== socket.id) {
+      socket.leave(room);
+    }
   });
 }
 
-//game functions
+//--------GAME FUNCTIONS-----------
 
-function startGame(roomName) {
-  io.to(roomName).emit("start-game");
+function startGame(opponent) {
+  io.to(opponent).emit("start-game");
+}
+function attackCell(socket, roomName, cell) {
+  io.to(roomName).emit("attack-cell", cell);
 }
