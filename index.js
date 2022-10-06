@@ -40,6 +40,11 @@ io.on("connection", (socket) => {
     attackCell(opponent, cell);
   });
 
+  socket.on("attack-result", ({ opponent: opponent, cell: cell, outcome: outcome }) => {
+    console.log(`Attack ${outcome ? "hit." : "missed."}`);
+    reportAttackResult(opponent, cell, outcome);
+  });
+
   //handle & cleanup on disconnect
   socket.on("disconnect", () => {
     socket._cleanup;
@@ -97,4 +102,7 @@ function startGame(opponent) {
 }
 function attackCell(opponent, cell) {
   io.to(opponent).emit("attack-cell", cell);
+}
+function reportAttackResult(opponent, cell, outcome) {
+  io.to(opponent).emit("attack-result", { cell: cell, outcome: outcome });
 }
