@@ -31,6 +31,7 @@ io.on("connection", (socket) => {
   //handle start-game request
   socket.on("start-game", ({ roomName, opponent }) => {
     startGame(opponent);
+    io.to(roomName).emit("client-update", { turn: socket.id });
     console.log(`Game started at room ${roomName}.`);
   });
 
@@ -40,9 +41,10 @@ io.on("connection", (socket) => {
     attackCell(opponent, cell);
   });
 
-  socket.on("attack-result", ({ opponent: opponent, cell: cell, outcome: outcome }) => {
+  socket.on("attack-result", ({ opponent: opponent, cell: cell, outcome: outcome, roomName: roomName }) => {
     console.log(`Attack ${outcome ? "hit." : "missed."}`);
     reportAttackResult(opponent, cell, outcome);
+    io.to(roomName).emit("client-update", { turn: socket.id });
   });
 
   //handle & cleanup on disconnect
