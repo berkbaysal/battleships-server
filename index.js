@@ -42,6 +42,11 @@ io.on("connection", (socket) => {
     playerReady(socket, opponent, opponentGameState);
   });
 
+  socket.on("game-over", ({ opponent, roomName }) => {
+    console.log(`Game in room ${roomName} ended, ${opponent} won.`);
+    io.to(opponent).emit("game-over");
+  });
+
   //handle attack
   socket.on("attack-cell", ({ opponent: opponent, cell: cell }) => {
     console.log(`${opponent} attacked cell ${cell}`);
