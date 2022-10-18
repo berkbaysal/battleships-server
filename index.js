@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 
@@ -8,6 +9,7 @@ const redText = "\x1B[31m";
 //BASH COLOR VARIABLES
 
 const app = express();
+app.use(cors());
 const port = 8080;
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
@@ -72,6 +74,12 @@ module.exports = app;
 
 //--------CONNECTION FUNCTIONS-----------
 
+async function checkIfRoomExists(roomName, res) {
+  const sockets = await io.in(roomName).fetchSockets(); //see if room is in use
+  if (sockets.length > 0) res.json({ roomExists: true });
+  else return res.json({ roomExists: false });
+}
+
 async function joinRoom(socket, roomName) {
   const sockets = await io.in(roomName).fetchSockets(); //see if room is in use
   if (sockets.length > 0) {
@@ -79,7 +87,7 @@ async function joinRoom(socket, roomName) {
     leaveAllRooms(socket); //leave default or previous room(s)
     socket.join(roomName); //join room
     const [hostId] = sockets.map((currentSocket) => currentSocket.id).filter((id) => id !== socket.id);
-    io.to(socket.id).emit("client-update", { roomName: roomName, opponent: hostId, opponentGameState: "inactive" }); //send opponent id to client
+    io.to(socket.id).emit("client-update", { roomName: roomName, opponent: hostId, opponentGameState: "inactive", clientIsHost: false }); //send opponent id to client
     io.to(hostId).emit("client-update", { roomName: roomName, opponent: socket.id, opponentGameState: "inactive" }); //send opponent id to host
     console.log(`Client ${socket.id} joined room ${roomName}.`); //log event
   } else {
@@ -93,7 +101,7 @@ async function createRoom(socket, roomName) {
     //if room IS empty
     leaveAllRooms(socket); //leave default or previous room(s)
     socket.join(roomName); //join room
-    socket.emit("client-update", { roomName: roomName, players: [socket.id] }); //broadcast to self host and room name
+    socket.emit("client-update", { roomName: roomName, players: [socket.id], clientIsHost: true }); //broadcast to self host and room name
     console.log(`Client ${socket.id} created room ${roomName}.`); //log room creation
   } else {
     //if room is already in use log it and refuse creation.
@@ -129,3 +137,9 @@ function playerReady(socket, opponent, opponentGameState) {
     io.to(opponent).emit("client-update", { opponentGameState: "waiting" });
   }
 }
+
+//API FUNCTIONS / ENDPOINTS
+
+app.get("/checkRoom", (req, res) => {
+  checkIfRoomExists(req.query.roomName, res);
+});
