@@ -62,6 +62,11 @@ io.on("connection", (socket) => {
   });
 
   //handle & cleanup on disconnect
+
+  socket.on("disconnecting", () => {
+    handleDisconnect(socket);
+  });
+
   socket.on("disconnect", () => {
     socket._cleanup;
     console.log(`${redText}Disconnected: ${socket.id}`);
@@ -115,6 +120,15 @@ function leaveAllRooms(socket) {
       socket.leave(room);
     }
   });
+}
+
+async function handleDisconnect(socket) {
+  const sockets = await socket.rooms;
+  for (const room of sockets.keys()) {
+    if (room !== socket.id) {
+      io.to(room).emit("opponent-left");
+    }
+  }
 }
 
 //--------GAME FUNCTIONS-----------
