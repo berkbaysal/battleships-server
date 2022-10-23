@@ -61,7 +61,16 @@ io.on("connection", (socket) => {
     io.to(roomName).emit("client-update", { turn: socket.id });
   });
 
+  socket.on("player-left", ({ opponent, roomName }) => {
+    console.log(`Player ${socket.id} left room ${roomName}`);
+    io.to(opponent).emit("opponent-left");
+  });
+
   //handle & cleanup on disconnect
+
+  socket.on("clean-room", ({ roomName }) => {
+    cleanRoom(roomName);
+  });
 
   socket.on("disconnecting", () => {
     handleDisconnect(socket);
@@ -110,6 +119,7 @@ async function createRoom(socket, roomName) {
     console.log(`Client ${socket.id} created room ${roomName}.`); //log room creation
   } else {
     //if room is already in use log it and refuse creation.
+    console.log(sockets);
     console.log(`Client ${socket.id} tried to create room ${roomName} but it already exists.`);
   }
 }
@@ -129,6 +139,10 @@ async function handleDisconnect(socket) {
       io.to(room).emit("opponent-left");
     }
   }
+}
+
+async function cleanRoom(roomName) {
+  io.in(roomName).socketsLeave(roomName);
 }
 
 //--------GAME FUNCTIONS-----------
