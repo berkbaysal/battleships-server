@@ -18,7 +18,7 @@ io.on("connection", (socket) => {
   //on successful connection: 1- Log, 2-Leave default room, 3-Send a client update to initialize local state
   console.log(`${greenText}Connected: ${socket.id}`);
   leaveAllRooms(socket);
-  socket.emit("client-update", { clientId: socket.id, gameState: "inactive" });
+  socket.emit("client-update", { clientId: socket.id });
 
   //handle room join request
   socket.on("join-room", (roomName) => {
@@ -69,6 +69,7 @@ io.on("connection", (socket) => {
   //handle & cleanup on disconnect
 
   socket.on("clean-room", ({ roomName }) => {
+    console.log(`Recieved request to clean room ${roomName}`);
     cleanRoom(roomName);
   });
 
@@ -119,7 +120,6 @@ async function createRoom(socket, roomName) {
     console.log(`Client ${socket.id} created room ${roomName}.`); //log room creation
   } else {
     //if room is already in use log it and refuse creation.
-    console.log(sockets);
     console.log(`Client ${socket.id} tried to create room ${roomName} but it already exists.`);
   }
 }
